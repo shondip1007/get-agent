@@ -140,7 +140,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section with Terminal Effect */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-40 pb-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent"></div>
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center space-y-8 mb-16">

@@ -46,6 +46,34 @@ export const RemoveFromCartSchema = z.object({
     .describe("UUID of the product to remove entirely from the cart"),
 });
 
+/** Tool 5 — clear all items or a single item from the cart */
+export const ClearCartSchema = z.object({
+  mode: z
+    .enum(["all", "item"])
+    .describe(
+      "'all' clears every item from the cart. 'item' removes one specific product.",
+    ),
+  product_id: z
+    .string()
+    .describe(
+      "UUID of the product to remove when mode is 'item'. Use empty string '' when mode is 'all'.",
+    ),
+});
+
+/** Tool 6 — checkout: create an invoice and clear the cart */
+export const CheckoutSchema = z.object({
+  confirm: z
+    .enum(["yes"])
+    .describe(
+      "Must be 'yes' to confirm the checkout and generate the invoice.",
+    ),
+  billing_email: z
+    .string()
+    .describe(
+      "Email for the invoice. Use empty string '' to fall back to the user's account email.",
+    ),
+});
+
 // ==================== CUSTOMER SUPPORT SCHEMAS ====================
 
 /**
