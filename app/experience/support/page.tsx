@@ -1,65 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ChatInterface from "@/components/ChatInterface";
+import UserMenu from "@/components/UserMenu";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
+
+interface Ticket {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  created_at: string;
+  message: string;
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} minute${mins !== 1 ? "s" : ""} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+}
 
 export default function SupportExperience() {
   const [showCTA, setShowCTA] = useState(false);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const tickets = [
-    {
-      id: "TKT-1234",
-      subject: "Order Delivery Delay",
-      status: "Open",
-      priority: "High",
-      created: "2 hours ago",
-    },
-    {
-      id: "TKT-1235",
-      subject: "Product Return Request",
-      status: "In Progress",
-      priority: "Medium",
-      created: "1 day ago",
-    },
-    {
-      id: "TKT-1236",
-      subject: "Account Access Issue",
-      status: "Resolved",
-      priority: "Low",
-      created: "3 days ago",
-    },
-  ];
+  const fetchTickets = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data, error: err } = await supabase
+      .from("support_tickets")
+      .select("id, subject, status, priority, created_at, message")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (err) {
+      setError(err.message);
+    } else {
+      setTickets(data ?? []);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   const handleMessageCount = (count: number) => {
-    if (count >= 5 && !showCTA) {
-      setShowCTA(true);
-    }
+    if (count >= 5 && !showCTA) setShowCTA(true);
+    // Re-fetch tickets after each agent reply — a ticket may have just been created
+    fetchTickets();
   };
 
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6">
+        <div className="w-full max-w-7xl">
+          <div
+            className="
+      flex items-center justify-between
+      px-8 py-4
+      rounded-2xl
+      bg-white/5
+      backdrop-blur-xl
+      border border-white/10
+      shadow-[0_8px_30px_rgba(0,0,0,0.3)]
+      transition-all duration-300
+      hover:bg-white/10
+      hover:border-white/20
+    "
+          >
+            {/* Left Side */}
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="Agentic Services Logo"
+                  width={40}
+                  height={40}
+                  priority
+                  className="object-contain"
+                />
+              </Link>
+
+              <span className="text-xl font-bold ml-2 tracking-tight">
+                <Link href="/" className="text-xl font-bold">
+                  Agentic Services
+                </Link>
+              </span>
             </div>
-            <span className="text-xl font-bold ml-2">Agentic Services</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">
-              Experience Center: Customer Support
-            </span>
-            <Link
-              href="/"
-              className="text-sm hover:text-orange-500 transition-colors"
-            >
-              ← Back
-            </Link>
+
+            {/* Header */}
+            <div className="text-center">
+              <h1 className="text-xl font-bold">Support</h1>
+              <p className="text-xs text-gray-400">
+                Get instant help from our AI Support Agent
+              </p>
+            </div>
+
+            {/* Right Side */}
+            <div className="flex items-center gap-6">
+              <UserMenu />
+            </div>
           </div>
         </div>
       </nav>
@@ -91,125 +148,117 @@ export default function SupportExperience() {
         </div>
       )}
 
-      <div className="pt-20 px-6 pb-6">
+      <div className="pt-40 px-6 pb-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6 text-center">
-            <h1 className="text-3xl font-bold mb-2">Support Portal</h1>
-            <p className="text-gray-400">
-              Get instant help from our AI Support Agent
-            </p>
-          </div>
-
           <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
             {/* Support Dashboard */}
             <div className="lg:col-span-2 overflow-y-auto space-y-6">
               {/* Tickets */}
               <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <h2 className="text-2xl font-bold mb-6">
-                  Your Support Tickets
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-md font-bold">Your Support Tickets</h2>
+                  <button
+                    onClick={fetchTickets}
+                    className="text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    ↻ Refresh
+                  </button>
+                </div>
 
-                <div className="space-y-4">
-                  {tickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <span className="text-sm text-gray-400">
-                            {ticket.id}
-                          </span>
-                          <h3 className="text-lg font-semibold">
-                            {ticket.subject}
-                          </h3>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((n) => (
+                      <div
+                        key={n}
+                        className="bg-black/30 rounded-lg p-4 border border-white/10 animate-pulse"
+                      >
+                        <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
+                        <div className="h-3 bg-white/5 rounded w-1/2" />
+                      </div>
+                    ))}
+                  </div>
+                ) : error ? (
+                  <p className="text-red-400 text-sm">{error}</p>
+                ) : tickets.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    <p className="text-3xl mb-3">🎫</p>
+                    <p className="text-sm">No tickets yet.</p>
+                    <p className="text-xs mt-1">
+                      Chat with the support agent to raise an issue.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tickets.map((ticket) => {
+                      const statusKey = ticket.status; // e.g. "open", "in_progress", "resolved", "closed"
+                      const statusLabel =
+                        statusKey === "in_progress"
+                          ? "In Progress"
+                          : statusKey.charAt(0).toUpperCase() +
+                            statusKey.slice(1);
+                      const priorityLabel =
+                        ticket.priority.charAt(0).toUpperCase() +
+                        ticket.priority.slice(1);
+
+                      return (
+                        <div
+                          key={ticket.id}
+                          className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2 gap-3">
+                            <div className="min-w-0">
+                              <span className="text-xs text-gray-500 font-mono truncate block">
+                                {ticket.id.slice(0, 8).toUpperCase()}
+                              </span>
+                              <h3 className="text-sm font-semibold leading-snug">
+                                {ticket.subject}
+                              </h3>
+                              {ticket.message && (
+                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                                  {ticket.message}
+                                </p>
+                              )}
+                            </div>
+                            <span
+                              className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                statusKey === "open"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : statusKey === "in_progress"
+                                    ? "bg-yellow-500/20 text-yellow-400"
+                                    : statusKey === "resolved"
+                                      ? "bg-green-500/20 text-green-400"
+                                      : "bg-gray-500/20 text-gray-400"
+                              }`}
+                            >
+                              {statusLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                            <span
+                              className={
+                                ticket.priority === "urgent"
+                                  ? "text-red-400"
+                                  : ticket.priority === "high"
+                                    ? "text-orange-400"
+                                    : ticket.priority === "medium"
+                                      ? "text-yellow-400"
+                                      : "text-gray-400"
+                              }
+                            >
+                              ● {priorityLabel}
+                            </span>
+                            <span>{timeAgo(ticket.created_at)}</span>
+                          </div>
                         </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            ticket.status === "Open"
-                              ? "bg-red-500/20 text-red-400"
-                              : ticket.status === "In Progress"
-                                ? "bg-yellow-500/20 text-yellow-400"
-                                : "bg-green-500/20 text-green-400"
-                          }`}
-                        >
-                          {ticket.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <span
-                          className={`${
-                            ticket.priority === "High"
-                              ? "text-red-400"
-                              : ticket.priority === "Medium"
-                                ? "text-yellow-400"
-                                : "text-gray-400"
-                          }`}
-                        >
-                          Priority: {ticket.priority}
-                        </span>
-                        <span>Created: {ticket.created}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Knowledge Base */}
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <h2 className="text-2xl font-bold mb-6">📚 Knowledge Base</h2>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors cursor-pointer">
-                    <h3 className="font-semibold mb-2">Return Policy</h3>
-                    <p className="text-sm text-gray-400">
-                      30-day money-back guarantee on all products
-                    </p>
+                      );
+                    })}
                   </div>
-                  <div className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors cursor-pointer">
-                    <h3 className="font-semibold mb-2">Shipping Info</h3>
-                    <p className="text-sm text-gray-400">
-                      Track your order and delivery times
-                    </p>
-                  </div>
-                  <div className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors cursor-pointer">
-                    <h3 className="font-semibold mb-2">Account Help</h3>
-                    <p className="text-sm text-gray-400">
-                      Manage your account settings
-                    </p>
-                  </div>
-                  <div className="bg-black/50 rounded-lg p-4 border border-white/10 hover:border-green-500/50 transition-colors cursor-pointer">
-                    <h3 className="font-semibold mb-2">Payment Issues</h3>
-                    <p className="text-sm text-gray-400">
-                      Resolve payment and billing problems
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg p-6 border border-green-500/30">
-                <h3 className="text-xl font-bold mb-4">⚡ Quick Actions</h3>
-                <div className="flex flex-wrap gap-3">
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    Track Order
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    Request Return
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    Update Address
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    Contact Human Agent
-                  </button>
-                </div>
+                )}
               </div>
             </div>
 
             {/* Chat Interface */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 h-full min-h-0">
               <ChatInterface
                 agentType="support"
                 agentName="Customer Support"

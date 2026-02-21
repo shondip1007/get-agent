@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import type { AgentRoute } from "@/helpers/openai/agents/Agent/ChatAgent";
 import { createClient } from "@/lib/supabase/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   id: string;
@@ -132,9 +134,9 @@ export default function ChatInterface({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/5 rounded-xl border border-white/10">
+    <div className="flex flex-col h-full bg-white/5 rounded-xl border border-white/10 min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
+      <div className="flex-shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
         <div className="text-4xl">{agentIcon}</div>
         <div>
           <h3 className="font-semibold text-md">{agentName}</h3>
@@ -143,9 +145,8 @@ export default function ChatInterface({
           </p>
         </div>
       </div>
-
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 py-8">
             <p className="text-md mb-2">Welcome!</p>
@@ -165,7 +166,28 @@ export default function ChatInterface({
                   : "bg-white/10 text-white"
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === "user" ? (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <div
+                  className="prose prose-invert prose-sm max-w-none
+                  prose-headings:font-semibold prose-headings:text-white
+                  prose-h2:text-base prose-h3:text-sm
+                  prose-p:text-gray-100 prose-p:leading-relaxed
+                  prose-strong:text-white prose-strong:font-semibold
+                  prose-ul:pl-4 prose-ul:space-y-1
+                  prose-ol:pl-4 prose-ol:space-y-1
+                  prose-li:text-gray-100
+                  prose-code:bg-white/10 prose-code:text-orange-300 prose-code:px-1 prose-code:rounded prose-code:text-xs
+                  prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10
+                  prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
+                  prose-hr:border-white/20"
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              )}
               <p className="text-xs opacity-70 mt-1">
                 {message.timestamp.toLocaleTimeString([], {
                   hour: "2-digit",
@@ -199,9 +221,11 @@ export default function ChatInterface({
 
         <div ref={messagesEndRef} />
       </div>
-
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-white/10">
+      <form
+        onSubmit={handleSubmit}
+        className="flex-shrink-0 p-4 border-t border-white/10"
+      >
         <div className="flex gap-2">
           <input
             type="text"

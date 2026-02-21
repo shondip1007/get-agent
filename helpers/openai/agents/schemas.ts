@@ -48,39 +48,38 @@ export const RemoveFromCartSchema = z.object({
 
 // ==================== CUSTOMER SUPPORT SCHEMAS ====================
 
-export const OrderLookupSchema = z.object({
-  orderId: z.string().optional().describe("Order ID if customer provides it"),
-  email: z.string().optional().describe("Customer email to lookup orders"),
-  orderType: z
-    .enum(["recent", "specific", "all"])
-    .default("recent")
-    .describe("Type of order lookup"),
-});
-
-export const ReturnRequestSchema = z.object({
-  orderId: z.string().describe("Order ID for the return request"),
-  productName: z.string().describe("Name of product to return"),
-  reason: z
-    .enum(["defective", "wrong_item", "not_needed", "other"])
-    .describe("Reason for return"),
-  description: z
+/**
+ * Tool 1 — load all KB articles & categories, then answer the user
+ * No parameters needed; the tool fetches everything from the database.
+ */
+export const LoadKBSchema = z.object({
+  query: z
     .string()
-    .optional()
-    .describe("Additional details about the return"),
+    .describe(
+      "The user's question or topic so the tool can return the most relevant articles",
+    ),
 });
 
-export const EscalateIssueSchema = z.object({
-  issueType: z
-    .enum(["technical", "billing", "complaint", "urgent"])
-    .describe("Type of issue requiring escalation"),
-  summary: z.string().describe("Brief summary of the issue"),
-  customerDetails: z
-    .object({
-      orderId: z.string().optional(),
-      email: z.string().optional(),
-    })
-    .optional()
-    .describe("Customer information for escalation"),
+/**
+ * Tool 2 — create a support ticket in the database
+ * All fields are required (no .optional()) so OpenAI validation passes.
+ * Set referenced_kb_id to an empty string "" when there is no related article.
+ */
+export const CreateSupportTicketSchema = z.object({
+  subject: z
+    .string()
+    .describe("Short subject line summarising the user's issue"),
+  message: z
+    .string()
+    .describe("Full description of the user's issue or request"),
+  priority: z
+    .enum(["low", "medium", "high", "urgent"])
+    .describe("Urgency level of the ticket"),
+  referenced_kb_id: z
+    .string()
+    .describe(
+      "UUID of a related KB article, or empty string '' if not applicable",
+    ),
 });
 
 // ==================== WEBSITE NAVIGATOR SCHEMAS ====================

@@ -541,7 +541,7 @@ export default function SalesExperience() {
             </div>
 
             {/* Chat Interface */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 h-full min-h-0">
               <ChatInterface
                 agentType="sales"
                 agentName="Sales Agent"

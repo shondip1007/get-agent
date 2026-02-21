@@ -2,302 +2,170 @@ import { tool } from "@openai/agents";
 import type { RunContext } from "@openai/agents";
 import {
   AgentContext,
-  OrderLookupSchema,
-  ReturnRequestSchema,
-  EscalateIssueSchema,
+  LoadKBSchema,
+  CreateSupportTicketSchema,
 } from "../schemas";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-// Mock order database
-const MOCK_ORDERS = [
-  {
-    orderId: "ORD-2024-001",
-    email: "demo@example.com",
-    date: "2024-02-15",
-    status: "shipped",
-    trackingNumber: "TRK123456789",
-    estimatedDelivery: "2024-02-22",
-    items: [{ name: "Pro Developer Laptop", price: 1299, quantity: 1 }],
-    total: 1299,
-    shippingMethod: "Standard (5-7 days)",
-  },
-  {
-    orderId: "ORD-2024-002",
-    email: "demo@example.com",
-    date: "2024-02-10",
-    status: "delivered",
-    trackingNumber: "TRK987654321",
-    deliveredDate: "2024-02-17",
-    items: [
-      { name: "Wireless Mechanical Keyboard", price: 89, quantity: 1 },
-      { name: "Ergonomic Wireless Mouse", price: 59, quantity: 1 },
-    ],
-    total: 148,
-    shippingMethod: "Express (2-3 days)",
-  },
-  {
-    orderId: "ORD-2024-003",
-    email: "demo@example.com",
-    date: "2024-01-28",
-    status: "delivered",
-    trackingNumber: "TRK555666777",
-    deliveredDate: "2024-02-05",
-    items: [{ name: '4K Monitor 27"', price: 449, quantity: 1 }],
-    total: 449,
-    shippingMethod: "Standard (5-7 days)",
-  },
-];
-
-/**
- * Tool to lookup order status and tracking information
- */
-export const lookupOrderTool = tool({
-  name: "lookup_order_status",
+// ---------------------------------------------------------------------------
+// Tool 1 — Load all KB articles + categories, filter by query relevance
+// ---------------------------------------------------------------------------
+export const loadKnowledgeBaseTool = tool({
+  name: "load_knowledge_base",
   description:
-    "Look up order status, tracking information, and delivery estimates. Can search by order ID or email address. Returns detailed order information including items, status, and tracking.",
-  parameters: OrderLookupSchema,
+    "Fetches all active knowledge base categories and articles from the database, then returns the most relevant ones for the user's question. Always call this first when a user asks a support question.",
+  parameters: LoadKBSchema,
 
-  async execute(params, runContext?: RunContext<AgentContext>) {
-    const { orderId, email, orderType } = params;
+  async execute(params, _runContext?: RunContext<AgentContext>) {
+    const { query } = params;
 
-    let orders = [...MOCK_ORDERS];
+    const { data: articles, error } = await supabaseAdmin
+      .from("kb_articles")
+      .select(
+        `
+        id,
+        title,
+        description,
+        content,
+        display_order,
+        kb_categories (
+          id,
+          name,
+          slug,
+          icon_name
+        )
+      `,
+      )
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
 
-    // Filter by order ID if provided
-    if (orderId) {
-      orders = orders.filter(
-        (o) => o.orderId.toLowerCase() === orderId.toLowerCase(),
-      );
-
-      if (orders.length === 0) {
-        return {
-          success: false,
-          message: `Order ID "${orderId}" not found. Please check the order number and try again.`,
-          suggestion:
-            "Check your email for the correct order number, or provide your email address to see all orders.",
-        };
-      }
-    } else if (email) {
-      // Filter by email
-      orders = orders.filter(
-        (o) => o.email.toLowerCase() === email.toLowerCase(),
-      );
-
-      if (orders.length === 0) {
-        return {
-          success: false,
-          message: `No orders found for email "${email}".`,
-          suggestion:
-            "Double-check the email address or contact support if you believe this is an error.",
-        };
-      }
-    }
-
-    // Apply order type filter
-    if (orderType === "recent") {
-      orders = orders.slice(0, 1); // Most recent order
-    }
-
-    // Format response
-    const formattedOrders = orders.map((order) => {
-      let statusMessage = "";
-      let trackingInfo = "";
-
-      switch (order.status) {
-        case "shipped":
-          statusMessage = `📦 Order shipped on ${order.date}`;
-          trackingInfo = `Tracking: ${order.trackingNumber}\nEstimated delivery: ${order.estimatedDelivery}\nShipping method: ${order.shippingMethod}`;
-          break;
-        case "delivered":
-          statusMessage = `✅ Order delivered on ${order.deliveredDate}`;
-          trackingInfo = `Tracking: ${order.trackingNumber}\nDelivered: ${order.deliveredDate}`;
-          break;
-        case "processing":
-          statusMessage = `⏳ Order is being processed`;
-          trackingInfo = `Expected to ship within 1-2 business days`;
-          break;
-      }
-
+    if (error) {
       return {
-        orderId: order.orderId,
-        orderDate: order.date,
-        status: order.status,
-        statusMessage,
-        trackingInfo,
-        items: order.items,
-        total: order.total,
-        canReturn:
-          order.status === "delivered" && order.deliveredDate
-            ? isWithinReturnWindow(order.deliveredDate)
-            : false,
+        success: false,
+        message: `Failed to load knowledge base: ${error.message}`,
+        articles: [],
+      };
+    }
+
+    if (!articles || articles.length === 0) {
+      return {
+        success: true,
+        message:
+          "The knowledge base is currently empty. Please let the user know and offer to create a support ticket.",
+        articles: [],
+      };
+    }
+
+    // Relevance scoring
+    const queryLower = query.toLowerCase();
+    const words = queryLower.split(/\s+/).filter((w) => w.length > 2);
+
+    const scored = articles.map((article) => {
+      let score = 0;
+      const title = article.title.toLowerCase();
+      const description = article.description.toLowerCase();
+      const content = (article.content ?? "").toLowerCase();
+
+      if (title.includes(queryLower)) score += 20;
+      if (description.includes(queryLower)) score += 10;
+      if (content.includes(queryLower)) score += 5;
+
+      words.forEach((word) => {
+        if (title.includes(word)) score += 6;
+        if (description.includes(word)) score += 3;
+        if (content.includes(word)) score += 1;
+      });
+
+      return { ...article, relevanceScore: score };
+    });
+
+    const sorted = scored.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    const results = sorted.slice(0, 10);
+
+    const formatted = results.map((a) => {
+      const cat = Array.isArray(a.kb_categories)
+        ? a.kb_categories[0]
+        : a.kb_categories;
+      return {
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        content: a.content ?? null,
+        relevanceScore: a.relevanceScore,
+        category: cat
+          ? { name: (cat as any).name, slug: (cat as any).slug }
+          : null,
       };
     });
 
     return {
       success: true,
-      message: `Found ${formattedOrders.length} order(s).`,
-      orders: formattedOrders,
-      trackingLink:
-        formattedOrders.length > 0 ? "https://demo-store.com/track" : undefined,
+      message: `Loaded ${formatted.length} article(s) from the knowledge base.`,
+      articles: formatted,
     };
   },
 });
 
-/**
- * Tool to process return requests
- */
-export const processReturnTool = tool({
-  name: "process_return_request",
+// ---------------------------------------------------------------------------
+// Tool 2 — Create a support ticket in the database
+// ---------------------------------------------------------------------------
+export const createSupportTicketTool = tool({
+  name: "create_support_ticket",
   description:
-    "Process a return request for an order. Validates return eligibility based on return policy (30-day window). Creates return label and provides next steps.",
-  parameters: ReturnRequestSchema,
+    "Creates a support ticket in the database when the user has a specific issue, complaint, or request that needs to be tracked. Use this when the user explicitly asks to raise/open a ticket, or when the knowledge base cannot resolve their issue.",
+  parameters: CreateSupportTicketSchema,
 
   async execute(params, runContext?: RunContext<AgentContext>) {
-    const { orderId, productName, reason, description } = params;
+    const userId = runContext?.context?.userId;
 
-    // Find the order
-    const order = MOCK_ORDERS.find(
-      (o) => o.orderId.toLowerCase() === orderId.toLowerCase(),
-    );
-
-    if (!order) {
+    if (!userId) {
       return {
         success: false,
-        message: `Order ID "${orderId}" not found. Please verify the order number.`,
+        message:
+          "You must be signed in to create a support ticket. Please log in and try again.",
       };
     }
 
-    // Check if order is delivered
-    if (order.status !== "delivered") {
+    const { subject, message, priority, referenced_kb_id } = params;
+
+    const { data: ticket, error } = await supabaseAdmin
+      .from("support_tickets")
+      .insert({
+        user_id: userId,
+        subject,
+        message,
+        priority,
+        status: "open",
+        referenced_kb_id:
+          referenced_kb_id && referenced_kb_id.trim() !== ""
+            ? referenced_kb_id
+            : null,
+      })
+      .select("id, subject, status, priority, created_at")
+      .single();
+
+    if (error) {
       return {
         success: false,
-        message: `Order ${orderId} has not been delivered yet. Returns can only be processed after delivery.`,
-        currentStatus: order.status,
+        message: `Failed to create support ticket: ${error.message}`,
       };
     }
-
-    // Check return window (30 days)
-    const isEligible = isWithinReturnWindow(order.deliveredDate!);
-
-    if (!isEligible) {
-      return {
-        success: false,
-        message: `Return window has expired for order ${orderId}. Returns must be initiated within 30 days of delivery.`,
-        deliveredDate: order.deliveredDate,
-        returnDeadline: getReturnDeadline(order.deliveredDate!),
-      };
-    }
-
-    // Check if product exists in order
-    const product = order.items.find((item) =>
-      item.name.toLowerCase().includes(productName.toLowerCase()),
-    );
-
-    if (!product) {
-      return {
-        success: false,
-        message: `Product "${productName}" not found in order ${orderId}.`,
-        orderItems: order.items.map((i) => i.name),
-      };
-    }
-
-    // Calculate refund amount
-    const restockingFee = reason === "defective" ? 0 : 15;
-    const refundAmount = product.price * product.quantity - restockingFee;
-
-    // Generate return authorization
-    const returnAuth = `RMA-${Date.now().toString().slice(-8)}`;
 
     return {
       success: true,
-      message: `✅ Return request approved for "${product.name}".`,
-      returnAuthorization: returnAuth,
-      orderId,
-      productName: product.name,
-      reason,
-      refundAmount: parseFloat(refundAmount.toFixed(2)),
-      restockingFee,
-      returnLabel: "https://demo-store.com/returns/label/demo123",
+      message: "✅ Support ticket created successfully.",
+      ticket: {
+        id: ticket.id,
+        subject: ticket.subject,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdAt: ticket.created_at,
+      },
       nextSteps: [
-        `1. Print the return label from the link above`,
-        `2. Pack the item in original packaging (if possible)`,
-        `3. Drop off at any shipping location`,
-        `4. Refund will be processed within 5-7 business days after we receive the item`,
+        `Your ticket ID is: ${ticket.id}`,
+        "Our support team will review your request and get back to you shortly.",
+        "You will be notified once there is an update on your ticket.",
       ],
-      estimatedRefundDate: getEstimatedRefundDate(),
     };
   },
 });
-
-/**
- * Tool to escalate issues to human support
- */
-export const escalateIssueTool = tool({
-  name: "escalate_to_human_agent",
-  description:
-    "Escalate complex issues to human support agents. Use for frustrated customers, billing disputes, technical issues beyond troubleshooting, or urgent matters requiring special attention.",
-  parameters: EscalateIssueSchema,
-
-  async execute(params, runContext?: RunContext<AgentContext>) {
-    const { issueType, summary, customerDetails } = params;
-
-    // Generate ticket number
-    const ticketNumber = `TICKET-${Date.now().toString().slice(-8)}`;
-
-    // Determine priority based on issue type
-    const priorityMap: Record<string, string> = {
-      urgent: "HIGH",
-      complaint: "MEDIUM",
-      billing: "MEDIUM",
-      technical: "LOW",
-    };
-
-    const priority = priorityMap[issueType] || "MEDIUM";
-
-    // Estimated wait time based on priority
-    const waitTimeMap: Record<string, string> = {
-      HIGH: "1-2 minutes",
-      MEDIUM: "3-5 minutes",
-      LOW: "5-10 minutes",
-    };
-
-    return {
-      success: true,
-      message: `🎧 Connecting you to a senior support specialist...`,
-      ticketNumber,
-      issueType,
-      priority,
-      estimatedWaitTime: waitTimeMap[priority],
-      summary,
-      nextSteps: [
-        "Your issue has been escalated to our senior support team",
-        `Ticket number: ${ticketNumber} (save this for reference)`,
-        `Estimated wait time: ${waitTimeMap[priority]}`,
-        "A specialist will reach out shortly via email or phone",
-      ],
-      customerDetails,
-    };
-  },
-});
-
-// Helper functions
-function isWithinReturnWindow(deliveredDate: string): boolean {
-  const delivered = new Date(deliveredDate);
-  const now = new Date();
-  const daysDifference = Math.floor(
-    (now.getTime() - delivered.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  return daysDifference <= 30;
-}
-
-function getReturnDeadline(deliveredDate: string): string {
-  const delivered = new Date(deliveredDate);
-  const deadline = new Date(delivered);
-  deadline.setDate(deadline.getDate() + 30);
-  return deadline.toISOString().split("T")[0];
-}
-
-function getEstimatedRefundDate(): string {
-  const now = new Date();
-  const refundDate = new Date(now);
-  refundDate.setDate(refundDate.getDate() + 7);
-  return refundDate.toISOString().split("T")[0];
-}
