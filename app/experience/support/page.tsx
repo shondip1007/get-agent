@@ -71,20 +71,7 @@ export default function SupportExperience() {
       {/* Navigation */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6">
         <div className="w-full max-w-7xl">
-          <div
-            className="
-      flex items-center justify-between
-      px-8 py-4
-      rounded-2xl
-      bg-white/5
-      backdrop-blur-xl
-      border border-white/10
-      shadow-[0_8px_30px_rgba(0,0,0,0.3)]
-      transition-all duration-300
-      hover:bg-white/10
-      hover:border-white/20
-    "
-          >
+          <div className="flex items-center justify-between px-8 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:bg-white/10 hover:border-white/20 ">
             {/* Left Side */}
             <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center">
@@ -107,7 +94,7 @@ export default function SupportExperience() {
 
             {/* Header */}
             <div className="text-center">
-              <h1 className="text-xl font-bold">Support</h1>
+              <h1 className="text-xl font-bold">TechSupport</h1>
               <p className="text-xs text-gray-400">
                 Get instant help from our AI Support Agent
               </p>

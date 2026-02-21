@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import ChatInterface from "@/components/ChatInterface";
+import Image from "next/image";
+import UserMenu from "@/components/UserMenu";
 
 export default function NavigatorExperience() {
   const [showCTA, setShowCTA] = useState(false);
@@ -50,26 +52,55 @@ export default function NavigatorExperience() {
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+      {/* Navigation */}
+      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6">
+        <div className="w-full max-w-7xl">
+          <div
+            className="
+      flex items-center justify-between
+      px-8 py-4
+      rounded-2xl
+      bg-white/5
+      backdrop-blur-xl
+      border border-white/10
+      shadow-[0_8px_30px_rgba(0,0,0,0.3)]
+      transition-all duration-300
+      hover:bg-white/10
+      hover:border-white/20
+    "
+          >
+            {/* Left Side */}
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="Agentic Services Logo"
+                  width={40}
+                  height={40}
+                  priority
+                  className="object-contain"
+                />
+              </Link>
+
+              <span className="text-xl font-bold ml-2 tracking-tight">
+                <Link href="/" className="text-xl font-bold">
+                  Agentic Services
+                </Link>
+              </span>
             </div>
-            <span className="text-xl font-bold ml-2">Agentic Services</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">
-              Experience Center: Website Navigator
-            </span>
-            <Link
-              href="/"
-              className="text-sm hover:text-orange-500 transition-colors"
-            >
-              ← Back
-            </Link>
+
+            {/* Header */}
+            <div className="text-center">
+              <h1 className="text-xl font-bold">TechCorp</h1>
+              <p className="text-xs text-gray-400">
+                Let our AI Navigator help you find what you need
+              </p>
+            </div>
+
+            {/* Right Side */}
+            <div className="flex items-center gap-6">
+              <UserMenu />
+            </div>
           </div>
         </div>
       </nav>
@@ -101,18 +132,8 @@ export default function NavigatorExperience() {
         </div>
       )}
 
-      <div className="pt-20 px-6 pb-6">
+      <div className="pt-40 px-6 pb-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6 text-center">
-            <h1 className="text-3xl font-bold mb-2">
-              TechCorp - Enterprise Solutions
-            </h1>
-            <p className="text-gray-400">
-              Let our AI Navigator help you find what you need
-            </p>
-          </div>
-
           <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
             {/* Website Content */}
             <div className="lg:col-span-2 overflow-y-auto space-y-6">
@@ -197,25 +218,10 @@ export default function NavigatorExperience() {
                   </div>
                 )}
               </div>
-
-              {/* Search Bar */}
-              <div className="bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-lg p-6 border border-purple-500/30">
-                <h3 className="text-xl font-bold mb-4">🔍 Site Search</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search documentation, guides, and more..."
-                    className="flex-1 px-4 py-3 bg-black/50 border border-white/20 rounded-lg focus:outline-none focus:border-purple-500 transition-colors"
-                  />
-                  <button className="bg-purple-500 hover:bg-purple-600 px-6 py-3 rounded-lg font-medium transition-colors">
-                    Search
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Chat Interface */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 h-full min-h-0">
               <ChatInterface
                 agentType="navigator"
                 agentName="Website Navigator"

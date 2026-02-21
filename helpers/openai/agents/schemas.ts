@@ -84,40 +84,16 @@ export const CreateSupportTicketSchema = z.object({
 
 // ==================== WEBSITE NAVIGATOR SCHEMAS ====================
 
-export const SearchPagesSchema = z.object({
+/**
+ * Single tool: search nav_modules + nav_paths from the database.
+ * All fields required (no .optional()) to satisfy OpenAI's schema validation.
+ */
+export const NavSearchSchema = z.object({
   query: z
     .string()
     .describe(
-      "Search query to find relevant pages (e.g., 'API documentation', 'pricing')",
+      "The user's intent or question, e.g. 'how do I change my plan' or 'billing settings'",
     ),
-  section: z
-    .enum(["all", "docs", "products", "support", "blog", "about"])
-    .default("all")
-    .describe("Limit search to specific section"),
-  maxResults: z
-    .number()
-    .default(3)
-    .describe("Maximum number of results to return"),
-});
-
-export const GetPageContentSchema = z.object({
-  pagePath: z
-    .string()
-    .describe(
-      "Page path/URL to retrieve content from (e.g., '/docs/quickstart')",
-    ),
-  summarize: z
-    .boolean()
-    .default(true)
-    .describe("Whether to return a summary or full content"),
-});
-
-export const FindRelatedPagesSchema = z.object({
-  currentPage: z.string().describe("Current page user is viewing"),
-  topic: z
-    .string()
-    .optional()
-    .describe("Specific topic to find related pages for"),
 });
 
 // ==================== PERSONAL ASSISTANT SCHEMAS ====================

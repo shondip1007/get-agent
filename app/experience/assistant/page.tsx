@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import ChatInterface from "@/components/ChatInterface";
+import Image from "next/image";
+import UserMenu from "@/components/UserMenu";
 
 export default function AssistantExperience() {
   const [showCTA, setShowCTA] = useState(false);
@@ -50,26 +52,41 @@ export default function AssistantExperience() {
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6">
+        <div className="w-full max-w-7xl">
+          <div className="flex items-center justify-between px-8 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:bg-white/10 hover:border-white/20 ">
+            {/* Left Side */}
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="Agentic Services Logo"
+                  width={40}
+                  height={40}
+                  priority
+                  className="object-contain"
+                />
+              </Link>
+
+              <span className="text-xl font-bold ml-2 tracking-tight">
+                <Link href="/" className="text-xl font-bold">
+                  Agentic Services
+                </Link>
+              </span>
             </div>
-            <span className="text-xl font-bold ml-2">Agentic Services</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">
-              Experience Center: Personal Assistant
-            </span>
-            <Link
-              href="/"
-              className="text-sm hover:text-orange-500 transition-colors"
-            >
-              ← Back
-            </Link>
+
+            {/* Header */}
+            <div className="text-center">
+              <h1 className="text-xl font-bold">Personal Assistant</h1>
+              <p className="text-xs text-gray-400">
+                Your AI Assistant is ready to help manage your day
+              </p>
+            </div>
+
+            {/* Right Side */}
+            <div className="flex items-center gap-6">
+              <UserMenu />
+            </div>
           </div>
         </div>
       </nav>
@@ -101,16 +118,8 @@ export default function AssistantExperience() {
         </div>
       )}
 
-      <div className="pt-20 px-6 pb-6">
+      <div className="pt-40 px-6 pb-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6 text-center">
-            <h1 className="text-3xl font-bold mb-2">Personal Dashboard</h1>
-            <p className="text-gray-400">
-              Your AI Assistant is ready to help manage your day
-            </p>
-          </div>
-
           <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
             {/* Dashboard Content */}
             <div className="lg:col-span-2 overflow-y-auto space-y-6">
@@ -189,49 +198,6 @@ export default function AssistantExperience() {
                 <button className="mt-4 w-full bg-white/10 hover:bg-white/20 px-4 py-3 rounded-lg text-sm font-medium transition-colors">
                   + Add New Task
                 </button>
-              </div>
-
-              {/* Email Drafts */}
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <h2 className="text-2xl font-bold mb-6">✉️ Draft Emails</h2>
-
-                <div className="space-y-3">
-                  <div className="bg-black/50 rounded-lg p-4 border border-white/10">
-                    <h3 className="font-semibold mb-2">
-                      Follow-up with Client
-                    </h3>
-                    <p className="text-sm text-gray-400 mb-3">
-                      Draft created 2 hours ago
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Review & Send
-                      </button>
-                      <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 rounded-lg p-6 border border-orange-500/30">
-                <h3 className="text-xl font-bold mb-4">⚡ Quick Actions</h3>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left">
-                    📧 Check Inbox
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left">
-                    📊 View Analytics
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left">
-                    📝 Create Note
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left">
-                    🔔 Set Reminder
-                  </button>
-                </div>
               </div>
             </div>
 
