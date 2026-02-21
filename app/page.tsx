@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import UserMenu from "@/components/UserMenu";
 
 export default function Home() {
   const texts = [
@@ -132,29 +133,7 @@ export default function Home() {
 
             {/* Right Side */}
             <div className="flex items-center gap-6">
-              <Link
-                href="/auth/login"
-                className="text-sm text-white/80 hover:text-orange-400 transition-colors"
-              >
-                Sign in
-              </Link>
-
-              <Link
-                href="/request-demo"
-                className="
-            bg-orange-500/90
-            hover:bg-orange-500
-            text-white
-            px-6 py-2
-            rounded-xl
-            text-sm font-medium
-            transition-all duration-300
-            shadow-lg shadow-orange-500/20
-            hover:shadow-orange-500/40
-          "
-              >
-                Get in touch
-              </Link>
+              <UserMenu />
             </div>
           </div>
         </div>
@@ -192,7 +171,7 @@ export default function Home() {
               </div>
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-bold leading-tight max-w-4xl mx-auto">
+            <h1 className="text-5xl lg:text-6xl font-bold leading-tight mt-8 max-w-4xl mx-auto">
               Experience AI Agents in{" "}
               <span className="text-orange-500">Real-World Scenarios</span>
             </h1>
