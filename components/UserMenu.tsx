@@ -83,14 +83,7 @@ export default function UserMenu() {
               onClick={() => setIsOpen(false)}
               className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition-colors"
             >
-              Profile Settings
-            </Link>
-            <Link
-              href="/dashboard"
-              onClick={() => setIsOpen(false)}
-              className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition-colors"
-            >
-              Dashboard
+              Profile
             </Link>
           </div>
 
