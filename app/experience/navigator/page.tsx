@@ -217,9 +217,9 @@ export default function NavigatorExperience() {
             {/* Chat Interface */}
             <div className="lg:col-span-1">
               <ChatInterface
+                agentType="navigator"
                 agentName="Website Navigator"
                 agentIcon="🧭"
-                systemPrompt="You are a helpful website navigator. Guide users to specific pages, summarize documentation, and help them find information quickly. Provide direct links and clear directions."
                 placeholder="Ask me to find something..."
                 onMessageCountChange={handleMessageCount}
               />

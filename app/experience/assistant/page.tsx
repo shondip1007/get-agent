@@ -238,9 +238,9 @@ export default function AssistantExperience() {
             {/* Chat Interface */}
             <div className="lg:col-span-1">
               <ChatInterface
+                agentType="assistant"
                 agentName="Personal Assistant"
                 agentIcon="📅"
-                systemPrompt="You are a helpful personal assistant. Help users manage their schedule, tasks, and communications. Offer to schedule meetings, prioritize tasks, and draft emails."
                 placeholder="How can I help you today?"
                 onMessageCountChange={handleMessageCount}
               />

@@ -12,6 +12,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@import "tailwindcss";
+
+@theme {
+  /* You can define custom colors or override the theme here */
+  --color-brand-orange: #f97316;
+  --color-deep-navy: #0a0a1a;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

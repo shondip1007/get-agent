@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import type { AgentRoute } from "@/helpers/openai/agents/Agent/ChatAgent";
+import { createClient } from "@/lib/supabase/client";
 
 interface Message {
   id: string;
@@ -10,24 +12,34 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
+  agentType: AgentRoute;
   agentName: string;
   agentIcon: string;
-  systemPrompt: string;
   placeholder?: string;
   onMessageCountChange?: (count: number) => void;
 }
 
 export default function ChatInterface({
+  agentType,
   agentName,
   agentIcon,
-  systemPrompt,
   placeholder = "Type your message...",
   onMessageCountChange,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const authTokenRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Grab auth token once on mount so the API can persist sessions/messages
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      authTokenRef.current = data.session?.access_token ?? null;
+    });
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,40 +55,40 @@ export default function ChatInterface({
     }
   }, [messages, onMessageCountChange]);
 
-  const simulateAgentResponse = async (
-    userMessage: string,
-  ): Promise<string> => {
-    // This will be replaced with actual LLM API call via Supabase Edge Function
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  const sendMessage = async (userText: string): Promise<string> => {
+    const history = messages.map((m) => ({ role: m.role, content: m.content }));
+    const payload = [...history, { role: "user" as const, content: userText }];
 
-    // Mock responses based on agent type
-    const responses: Record<string, string[]> = {
-      "Sales Agent": [
-        "I'd be happy to help you find the perfect product! Based on your needs, I recommend checking out our premium collection. Can you tell me more about what you're looking for?",
-        "Great choice! That product is currently on sale with a 15% discount. Would you like me to add it to your cart?",
-        "We have excellent options in that category. Let me show you our top-rated products that match your requirements.",
-      ],
-      "Customer Support": [
-        "I understand your concern. Let me look into that for you right away. Can you provide me with your order number?",
-        "Thank you for that information. According to our records, your order is currently in transit and should arrive within 2-3 business days.",
-        "I apologize for the inconvenience. Let me escalate this to our senior support team to ensure we resolve this quickly.",
-      ],
-      "Website Navigator": [
-        "I can help you navigate our site! The information you're looking for is in our documentation section. Let me guide you there.",
-        "That's a great question! You can find detailed information about that on our Features page. Would you like me to summarize it for you?",
-        "I've found several relevant pages that might help. Let me provide you with direct links to the most useful resources.",
-      ],
-      "Personal Assistant": [
-        "I've added that to your schedule. You now have a meeting scheduled for tomorrow at 2 PM. Would you like me to send calendar invites?",
-        "Here's a summary of your tasks for today: You have 3 high-priority items and 5 regular tasks. Shall I help you prioritize?",
-        "I've drafted that email for you. Would you like me to review it before sending, or would you like to make any changes?",
-      ],
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
     };
+    if (authTokenRef.current) {
+      headers["Authorization"] = `Bearer ${authTokenRef.current}`;
+    }
 
-    const agentResponses = responses[agentName] || [
-      "I'm here to help! How can I assist you today?",
-    ];
-    return agentResponses[Math.floor(Math.random() * agentResponses.length)];
+    const res = await fetch("/api/agent/chat", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        messages: payload,
+        agentType,
+        sessionId, // pass current session so messages append to same session
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // Persist sessionId for subsequent messages in this conversation
+    if (data.sessionId && !sessionId) {
+      setSessionId(data.sessionId);
+    }
+
+    return data.response as string;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,26 +107,25 @@ export default function ChatInterface({
     setIsTyping(true);
 
     try {
-      const response = await simulateAgentResponse(input);
-
+      const response = await sendMessage(userMessage.content);
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: response,
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Error getting response:", error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "I don't have that information in my current demo environment, but a fully trained agent would handle this seamlessly!",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: `Sorry, something went wrong: ${error?.message ?? "unknown error"}. Please try again.`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -122,12 +133,12 @@ export default function ChatInterface({
 
   return (
     <div className="flex flex-col h-full bg-white/5 rounded-xl border border-white/10">
-      {/* Chat Header */}
+      {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
-        <div className="text-3xl">{agentIcon}</div>
+        <div className="text-4xl">{agentIcon}</div>
         <div>
-          <h3 className="font-semibold">{agentName}</h3>
-          <p className="text-sm text-gray-400">
+          <h3 className="font-semibold text-md">{agentName}</h3>
+          <p className="text-xs text-gray-400">
             {isTyping ? "Typing..." : "Online"}
           </p>
         </div>
@@ -137,8 +148,8 @@ export default function ChatInterface({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 py-8">
-            <p className="text-lg mb-2">👋 Welcome!</p>
-            <p>Start a conversation with the {agentName}</p>
+            <p className="text-md mb-2">Welcome!</p>
+            <p className="text-xs">Start a conversation with the {agentName}</p>
           </div>
         )}
 
@@ -172,15 +183,15 @@ export default function ChatInterface({
                 <div
                   className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "0ms" }}
-                ></div>
+                />
                 <div
                   className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "150ms" }}
-                ></div>
+                />
                 <div
                   className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "300ms" }}
-                ></div>
+                />
               </div>
             </div>
           </div>

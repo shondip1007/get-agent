@@ -211,9 +211,9 @@ export default function SupportExperience() {
             {/* Chat Interface */}
             <div className="lg:col-span-1">
               <ChatInterface
+                agentType="support"
                 agentName="Customer Support"
                 agentIcon="🎧"
-                systemPrompt="You are a helpful customer support agent. Handle inquiries about orders, returns, shipping, and account issues. Reference the return policy when needed and offer to escalate to human agents for complex issues."
                 placeholder="How can we help you today?"
                 onMessageCountChange={handleMessageCount}
               />
