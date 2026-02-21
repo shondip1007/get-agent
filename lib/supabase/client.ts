@@ -8,7 +8,7 @@ export const createClient = () => {
     cookies: {
       get(name: string) {
         // Check if running in browser
-        if (typeof document === 'undefined') return undefined;
+        if (typeof document === "undefined") return undefined;
         // Get cookie value from document.cookie
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -16,7 +16,7 @@ export const createClient = () => {
       },
       set(name: string, value: string, options: any) {
         // Check if running in browser
-        if (typeof document === 'undefined') return;
+        if (typeof document === "undefined") return;
         // Set cookie using document.cookie
         let cookie = `${name}=${value}`;
         if (options?.maxAge) cookie += `; max-age=${options.maxAge}`;
@@ -28,7 +28,7 @@ export const createClient = () => {
       },
       remove(name: string, options: any) {
         // Check if running in browser
-        if (typeof document === 'undefined') return;
+        if (typeof document === "undefined") return;
         // Remove cookie by setting expiry to past date
         let cookie = `${name}=; max-age=0`;
         if (options?.path) cookie += `; path=${options.path}`;
