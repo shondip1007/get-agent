@@ -98,71 +98,59 @@ export const NavSearchSchema = z.object({
 
 // ==================== PERSONAL ASSISTANT SCHEMAS ====================
 
-export const ScheduleMeetingSchema = z.object({
-  title: z.string().describe("Meeting title/subject"),
-  attendees: z.array(z.string()).describe("List of attendee names or emails"),
-  duration: z.number().default(60).describe("Meeting duration in minutes"),
-  preferredDate: z
-    .string()
-    .optional()
-    .describe("Preferred date in YYYY-MM-DD format"),
-  preferredTime: z
-    .string()
-    .optional()
-    .describe("Preferred time in HH:MM format"),
-  description: z.string().optional().describe("Meeting description or agenda"),
-});
+/**
+ * All fields are required (no .optional()) to satisfy OpenAI's strict schema validation.
+ * Use empty string "" as a sentinel where a field is not applicable.
+ */
 
-export const DraftEmailSchema = z.object({
-  recipient: z.string().describe("Email recipient name or email address"),
-  purpose: z
+/** Tool 1 — fetch tasks, filtered by status/priority */
+export const FetchTasksSchema = z.object({
+  filter: z
     .enum([
-      "meeting_request",
-      "follow_up",
-      "status_update",
-      "thank_you",
-      "decline",
-      "general",
+      "all",
+      "todo",
+      "in_progress",
+      "completed",
+      "archived",
+      "high_priority",
+      "overdue",
     ])
-    .describe("Purpose/type of email"),
-  context: z.string().describe("Context or key points to include in email"),
-  tone: z
-    .enum(["formal", "professional", "casual", "friendly"])
-    .default("professional")
-    .describe("Tone of the email"),
+    .describe(
+      "Filter tasks: 'all' returns everything, others filter by status/priority/due date",
+    ),
 });
 
-export const ManageTasksSchema = z.object({
+/** Tool 2 — create / edit / delete / complete a task */
+export const ManageTaskSchema = z.object({
   action: z
-    .enum(["add", "list", "prioritize", "complete"])
-    .describe("Action to perform on tasks"),
-  taskTitle: z.string().optional().describe("Task title (for add action)"),
-  taskDescription: z.string().optional().describe("Task description"),
+    .enum(["create", "edit", "delete", "complete", "archive"])
+    .describe("Action to perform on a task"),
+  task_id: z
+    .string()
+    .describe(
+      "UUID of the task for edit/delete/complete/archive. Use empty string '' for create.",
+    ),
+  title: z
+    .string()
+    .describe(
+      "Task title. Required for create. Use empty string '' when not changing on edit.",
+    ),
+  description: z
+    .string()
+    .describe("Task description. Use empty string '' if not applicable."),
   priority: z
     .enum(["low", "medium", "high", "urgent"])
-    .optional()
-    .describe("Task priority"),
-  dueDate: z.string().optional().describe("Due date in YYYY-MM-DD format"),
-  filter: z
-    .enum(["all", "today", "week", "overdue", "high_priority"])
-    .optional()
-    .default("all")
-    .describe("Filter for listing tasks"),
+    .describe("Task priority level"),
+  due_at: z
+    .string()
+    .describe(
+      "Due date/time in ISO 8601 format, e.g. '2026-02-25T17:00:00Z'. Use empty string '' if none.",
+    ),
 });
 
-export const CheckCalendarSchema = z.object({
-  date: z
-    .string()
-    .optional()
-    .describe(
-      "Specific date to check in YYYY-MM-DD format. If not provided, checks today",
-    ),
-  range: z
-    .enum(["day", "week", "month"])
-    .default("day")
-    .describe("Time range to check"),
-  includeAvailability: z
-    .boolean()
-    .default(true)
-    .describe("Whether to include available time slots"),
+/** Tool 3 — send an email via Gmail SMTP */
+export const SendEmailSchema = z.object({
+  to: z.string().describe("Recipient email address"),
+  subject: z.string().describe("Email subject line"),
+  body: z.string().describe("Email body — plain text or basic HTML"),
 });
