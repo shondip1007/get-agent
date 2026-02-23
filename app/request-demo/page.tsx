@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function JoinWaitlist() {
   const router = useRouter();
@@ -17,19 +18,46 @@ export default function JoinWaitlist() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const companySizeMap: Record<string, string> = {
+    "1-10": "small_2_10",
+    "11-50": "medium_11_50",
+    "51-200": "large_51_200",
+    "201-1000": "enterprise_200_plus",
+    "1000+": "enterprise_200_plus",
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setApiError(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const supabase = createClient();
+
+    const { error } = await supabase.from("waitlist_users").insert({
+      email: formData.email.trim().toLowerCase(),
+      full_name: formData.name.trim(),
+      company_name: formData.company.trim() || null,
+      company_size: companySizeMap[formData.companySize] ?? null,
+      interest_area: formData.interest || null,
+      metadata: formData.role.trim() ? { role: formData.role.trim() } : {},
+    });
+
+    if (error) {
+      if (error.code === "23505") {
+        setApiError("You're already on the waitlist! We'll be in touch soon.");
+      } else {
+        setApiError("Something went wrong. Please try again.");
+        console.error("[waitlist] insert error:", error);
+      }
+      setIsSubmitting(false);
+      return;
+    }
 
     setIsSubmitting(false);
     setSubmitted(true);
-
-    setTimeout(() => {
-      router.push("/");
-    }, 3000);
+    setTimeout(() => router.push("/"), 3000);
   };
 
   if (submitted) {
@@ -227,6 +255,15 @@ export default function JoinWaitlist() {
                 <option value="custom">Custom AI Solution</option>
               </select>
             </div>
+
+            {/* Error message */}
+            {apiError && (
+              <div className="md:col-span-2">
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  {apiError}
+                </p>
+              </div>
+            )}
 
             {/* Button spans full width */}
             <div className="md:col-span-2 pt-4">
